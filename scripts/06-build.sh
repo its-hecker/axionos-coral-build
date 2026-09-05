@@ -10,12 +10,15 @@ log "Sourcing envsetup.sh"
 # shellcheck disable=SC1091
 source build/envsetup.sh
 
-log "breakfast $DEVICE_CODENAME"
-breakfast "$DEVICE_CODENAME"
+# AxionOS ships its own build wrapper (axion/ax) rather than stock
+# breakfast/brunch — using breakfast/brunch here would silently build
+# against the wrong target config.
+log "axion $DEVICE_CODENAME userdebug va"
+axion "$DEVICE_CODENAME" userdebug va
 
-log "Starting brunch $DEVICE_CODENAME — logging to $LOGFILE"
+log "Starting ax -br -j$(nproc --all) — logging to $LOGFILE"
 log "This can take 25 min to a few hours. Safe to detach (byobu) and check back."
-if brunch "$DEVICE_CODENAME" 2>&1 | tee "$LOGFILE"; then
+if ax -br -j"$(nproc --all)" 2>&1 | tee "$LOGFILE"; then
   ok "Build finished. Output should be under out/target/product/$DEVICE_CODENAME/"
   ok "Full log: $LOGFILE"
 else

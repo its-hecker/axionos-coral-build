@@ -3,8 +3,10 @@
 Automates the AxionOS 2.8 + KernelSU-Next + SUSFS build pipeline for coral on
 a ServerHive-style rented build server. Coral is **not** an officially
 maintained AxionOS device — this bridges it via the underlying LineageOS
-`lineage-22.2` device tree, so expect some manual troubleshooting on the
-sepolicy/kernel-patch steps.
+device tree, so expect some manual troubleshooting on the sepolicy/kernel-patch
+steps. AxionOS's manifest is currently on `lineage-23.2`; the device/kernel/
+vendor trees fall back to older `lineage-22.x` branches if a component hasn't
+caught up yet (see `BRANCH_FALLBACKS` in `config.env`).
 
 ## Usage
 
@@ -13,13 +15,14 @@ git clone https://github.com/<your-username>/axionos-coral-build.git
 cd axionos-coral-build
 chmod +x build.sh scripts/*.sh
 
-./build.sh setup      # git identity + gitcookies reminder (one-time, manual step required)
-./build.sh sync       # repo init + repo sync — the long step, hours depending on network
-./build.sh trees      # clone device/kernel/vendor trees, with branch auto-fallback
-./build.sh keys       # generate + back up signing keys
-./build.sh ksu        # integrate KernelSU-Next + SUSFS into the kernel
-./build.sh sepolicy   # add Axion's required SELinux rules (coral doesn't have these built in)
-./build.sh build      # breakfast + brunch, logs to a timestamped file
+./build.sh setup         # git identity + gitcookies reminder (one-time, manual step required)
+./build.sh sync          # repo init + repo sync — the long step, hours depending on network
+./build.sh trees         # clone device/kernel/vendor trees, with branch auto-fallback
+./build.sh keys          # generate + back up signing keys
+./build.sh ksu           # integrate KernelSU-Next + SUSFS into the kernel
+./build.sh sepolicy      # add Axion's required SELinux rules (coral doesn't have these built in)
+./build.sh device-props  # set maintainer/camera/processor properties for About Phone
+./build.sh build         # axion + ax, logs to a timestamped file
 
 # or just run everything in order:
 ./build.sh all
@@ -36,6 +39,11 @@ All the URLs, branches, and versions live in `config.env`. If a branch
 listed there stops existing upstream, add the next one to
 `BRANCH_FALLBACKS` and re-run `trees` — the script checks each candidate
 against the actual remote before cloning.
+
+`config.env` also sets the AxionOS "About phone" device properties
+(`AXION_MAINTAINER`, `AXION_CAMERA_REAR_INFO`, `AXION_CAMERA_FRONT_INFO`,
+`AXION_PROCESSOR`) that `device-props` writes into the device tree's
+product makefile. Maintainer is currently set to `Hecker`.
 
 ## What this does NOT automate
 
@@ -61,5 +69,6 @@ scripts/
   03-keygen.sh
   04-ksu-susfs.sh
   05-sepolicy-patch.sh
+  07-device-properties.sh
   06-build.sh
 ```
