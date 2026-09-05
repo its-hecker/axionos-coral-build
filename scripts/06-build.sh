@@ -13,8 +13,9 @@ source build/envsetup.sh
 # AxionOS ships its own build wrapper (axion/ax) rather than stock
 # breakfast/brunch — using breakfast/brunch here would silently build
 # against the wrong target config.
-log "axion $DEVICE_CODENAME userdebug va"
-axion "$DEVICE_CODENAME" userdebug va
+# "core" = core Google Mobile Services (lighter than full "gms").
+log "axion $DEVICE_CODENAME userdebug core"
+axion "$DEVICE_CODENAME" userdebug core
 
 log "Starting ax -br -j$(nproc --all) — logging to $LOGFILE"
 log "This can take 25 min to a few hours. Safe to detach (byobu) and check back."
