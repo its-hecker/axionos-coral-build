@@ -20,6 +20,23 @@ if [[ -z "$DEVICE_MK" ]]; then
 fi
 [[ -n "$DEVICE_MK" && -f "$DEVICE_MK" ]] || die "Couldn't find $DTREE's product makefile (expected lineage_${DEVICE_CODENAME}.mk). Add the block below to it by hand."
 
+# --- Required AxionOS device-tree lines ---
+# Every AxionOS device tree needs these two lines for the About Phone
+# section and GMS framework to work. Not optional, unlike the properties
+# block below.
+if grep -q "TARGET_DISABLE_EPPE" "$DEVICE_MK"; then
+  ok "Required AxionOS inherit/EPPE lines already present in $DEVICE_MK — skipping."
+else
+  log "Adding required AxionOS lines (TARGET_DISABLE_EPPE + inherit-product) to $DEVICE_MK"
+  cat <<'EOF' >> "$DEVICE_MK"
+
+# --- Required AxionOS lines (added by 07-device-properties.sh) ---
+TARGET_DISABLE_EPPE := true
+$(call inherit-product, vendor/lineage/config/common_full_phone.mk)
+EOF
+  ok "Required lines added."
+fi
+
 if grep -q "AXION_MAINTAINER" "$DEVICE_MK"; then
   ok "AxionOS device properties already present in $DEVICE_MK — skipping."
 else
@@ -35,7 +52,18 @@ EOF
   ok "Device properties written."
 fi
 
-warn "Double check $DEVICE_MK also has:"
-warn "  TARGET_DISABLE_EPPE := true"
-warn "  \$(call inherit-product, vendor/lineage/config/common_full_phone.mk)"
-warn "AxionOS requires both for the About Phone section and GMS framework to work correctly."
+if grep -q "TARGET_INCLUDE_AXFX" "$DEVICE_MK"; then
+  ok "AxionFx flag already present in $DEVICE_MK — skipping."
+else
+  log "Enabling AxionFx (TARGET_INCLUDE_AXFX) in $DEVICE_MK"
+  cat <<'EOF' >> "$DEVICE_MK"
+
+# --- AxionFx (added by 07-device-properties.sh) ---
+TARGET_INCLUDE_AXFX := true
+EOF
+  ok "AxionFx enabled."
+fi
+
+warn "Debugging (persist.sys.ax_debug_enabled), HBM, doze flags, and the LOS-prebuilts"
+warn "flag were left at AxionOS defaults (all off/disabled) — edit $DEVICE_MK by hand"
+warn "if a specific one turns out to be needed (e.g. after a bootloop)."

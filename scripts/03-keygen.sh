@@ -13,28 +13,16 @@ fi
 
 need_cmd make
 
-subject='/C=US/ST=California/L=Mountain View/O=Android/OU=Android/CN=Android/emailAddress=android@android.com'
-log "Generating signing keys with subject: $subject"
+# AxionOS ships its own key-generation helper (gk -s) via envsetup.sh,
+# rather than needing a manual make_key loop.
+log "Sourcing envsetup.sh to get the gk helper"
+# shellcheck disable=SC1091
+source build/envsetup.sh
 
-mkdir -p "$HOME/.android-certs"
-for x in bluetooth media networkstack nfc platform releasekey sdk_sandbox shared testkey verifiedboot; do
-  ./development/tools/make_key "$HOME/.android-certs/$x" "$subject" </dev/null || die "make_key failed for $x"
-done
+log "Generating signing keys with: gk -s"
+gk -s || die "gk -s failed — check that build/envsetup.sh sourced correctly and try again."
 
-mkdir -p vendor/lineage-priv
-mv "$HOME/.android-certs" vendor/lineage-priv/keys
-echo "PRODUCT_DEFAULT_DEV_CERTIFICATE := vendor/lineage-priv/keys/releasekey" > vendor/lineage-priv/keys/keys.mk
-
-cat <<'EOF' > vendor/lineage-priv/keys/BUILD.bazel
-filegroup(
-    name = "android_certificate_directory",
-    srcs = glob([
-        "*.pk8",
-        "*.pem",
-    ]),
-    visibility = ["//visibility:public"],
-)
-EOF
+[[ -d vendor/lineage-priv/keys ]] || die "gk -s finished but vendor/lineage-priv/keys wasn't created — check its output above."
 
 mkdir -p "$KEYS_BACKUP_DIR"
 cp -r vendor/lineage-priv/keys "$KEYS_BACKUP_DIR/coral-keys-$(date +%Y%m%d-%H%M%S)"

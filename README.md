@@ -43,7 +43,15 @@ against the actual remote before cloning.
 `config.env` also sets the AxionOS "About phone" device properties
 (`AXION_MAINTAINER`, `AXION_CAMERA_REAR_INFO`, `AXION_CAMERA_FRONT_INFO`,
 `AXION_PROCESSOR`) that `device-props` writes into the device tree's
-product makefile. Maintainer is currently set to `Hecker`.
+product makefile, along with the two lines every AxionOS device tree
+requires (`TARGET_DISABLE_EPPE`, the `inherit-product` line) and
+`TARGET_INCLUDE_AXFX := true` (AxionFx enabled). Debugging, HBM, doze
+flags, and LOS prebuilt apps are left at AxionOS's defaults (off) —
+edit the device tree's makefile by hand if one of those turns out to be
+needed. Maintainer is currently set to `Hecker`.
+
+Key generation (`keys` step) uses AxionOS's own `gk -s` helper (from
+`envsetup.sh`), not a manual `make_key` loop.
 
 Two things are toggleable in `config.env`:
 
