@@ -5,6 +5,12 @@ source ../config.env
 source lib.sh
 require_source_root
 
+if [[ "${INTEGRATE_KSU_SUSFS,,}" != "true" ]]; then
+  warn "INTEGRATE_KSU_SUSFS is set to \"$INTEGRATE_KSU_SUSFS\" in config.env — skipping"
+  warn "KernelSU-Next + SUSFS integration. This will be a stock, non-rooted kernel build."
+  exit 0
+fi
+
 KDIR="$SOURCE_ROOT/$KERNEL_TREE_PATH"
 [[ -d "$KDIR" ]] || die "Kernel tree not found at $KDIR — run 02-clone-device-trees.sh first."
 cd "$KDIR"

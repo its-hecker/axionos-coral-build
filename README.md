@@ -45,6 +45,15 @@ against the actual remote before cloning.
 `AXION_PROCESSOR`) that `device-props` writes into the device tree's
 product makefile. Maintainer is currently set to `Hecker`.
 
+Two things are toggleable in `config.env`:
+
+- **`INTEGRATE_KSU_SUSFS`** (`true`/`false`) — set to `false` to skip
+  `04-ksu-susfs.sh` entirely and build a stock, non-rooted kernel. Defaults
+  to `true`.
+- **`GMS_VARIANT`** — controls Google apps: `gms`/`full` (full GMS),
+  `pico` (minimal GMS), `core` (core GMS, current default), or
+  `va`/`vanilla` (no Google apps at all).
+
 ## What this does NOT automate
 
 - **git cookies** (`00-setup-git.sh` only checks/reminds) — this needs an
