@@ -7,8 +7,12 @@ require_source_root
 
 LOGFILE="$SOURCE_ROOT/build-$(date +%Y%m%d-%H%M%S).log"
 log "Sourcing envsetup.sh"
+# See 03-keygen.sh — AOSP's envsetup.sh isn't `set -u` safe (throws
+# "TOP: unbound variable"), so relax strict mode just for the source.
+set +u
 # shellcheck disable=SC1091
 source build/envsetup.sh
+set -u
 
 # AxionOS ships its own build wrapper (axion/ax) rather than stock
 # breakfast/brunch — using breakfast/brunch here would silently build
