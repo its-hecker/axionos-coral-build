@@ -15,15 +15,17 @@ Steps (run in this order the first time):
   sync          repo init + repo sync AxionOS manifest     (01-sync-source.sh)
   trees         clone device/kernel/vendor trees           (02-clone-device-trees.sh)
   keys          generate + backup signing keys             (03-keygen.sh)
-  ksu           integrate KernelSU-Next + SUSFS             (04-ksu-susfs.sh)
+  ksu           integrate ReSukiSU, Manual Hook mode, no SUSFS (04-resukisu.sh)
   kernelrelease-fix
                 shorten kernel version string (64-char fix) (08-fix-kernelrelease.sh)
-                runs automatically at the end of 'ksu' -- only needed standalone
-                if you want to re-apply it without redoing KSU/SUSFS integration.
+                not auto-run by 'ksu' anymore (see 04-resukisu.sh's trailing
+                comment) -- only run this standalone if 06-build.sh fails
+                with a UTS_RELEASE-exceeds-64-characters error.
   path-umount-fix
                 backport path_umount() for pre-5.9 kernels    (09-fix-path-umount.sh)
-                runs automatically at the end of 'ksu' -- only needed standalone
-                if you want to re-apply it without redoing KSU/SUSFS integration.
+                not auto-run by 'ksu' anymore (see 04-resukisu.sh's trailing
+                comment) -- only run this standalone if 06-build.sh fails
+                with an "undefined symbol: path_umount" link error.
   sepolicy      add Axion's required SELinux rules          (05-sepolicy-patch.sh)
   device-props  set maintainer/camera/processor properties  (07-device-properties.sh)
   build         axion + ax                                  (06-build.sh)
@@ -49,7 +51,7 @@ case "$STEP" in
   sync)         run_step "source sync"       "01-sync-source.sh" ;;
   trees)        run_step "device trees"      "02-clone-device-trees.sh" ;;
   keys)         run_step "signing keys"      "03-keygen.sh" ;;
-  ksu)          run_step "KSU-Next+SUSFS"    "04-ksu-susfs.sh" ;;
+  ksu)          run_step "ReSukiSU"         "04-resukisu.sh" ;;
   kernelrelease-fix) run_step "kernel release length fix" "08-fix-kernelrelease.sh" ;;
   path-umount-fix)   run_step "path_umount backport"      "09-fix-path-umount.sh" ;;
   sepolicy)     run_step "sepolicy patch"    "05-sepolicy-patch.sh" ;;
@@ -60,7 +62,7 @@ case "$STEP" in
     run_step "source sync"       "01-sync-source.sh"
     run_step "device trees"      "02-clone-device-trees.sh"
     run_step "signing keys"      "03-keygen.sh"
-    run_step "KSU-Next+SUSFS"    "04-ksu-susfs.sh"
+    run_step "ReSukiSU"           "04-resukisu.sh"
     run_step "sepolicy patch"    "05-sepolicy-patch.sh"
     run_step "device properties" "07-device-properties.sh"
     run_step "build"             "06-build.sh"
