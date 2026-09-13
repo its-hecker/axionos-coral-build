@@ -18,7 +18,9 @@ log "Sourcing envsetup.sh"
 # next.
 set +u
 # shellcheck disable=SC1091
+set +u
 source build/envsetup.sh
+set -u
 
 # AxionOS ships its own build wrapper (axion/ax) rather than stock
 # breakfast/brunch - using breakfast/brunch here would silently build

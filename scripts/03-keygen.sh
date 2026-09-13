@@ -22,6 +22,7 @@ log "Sourcing envsetup.sh to get the gk helper"
 # vendor/lineage-priv/keys. Relax strict mode just for the source.
 set +u
 # shellcheck disable=SC1091
+set +u
 source build/envsetup.sh
 set -u
 
