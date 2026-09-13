@@ -113,3 +113,18 @@ ok "KernelSU-Next + SUSFS integration complete."
 # build-breaking "unused label" error. Fix it now, right after
 # integration, so a clean build never hits it.
 "$(dirname "${BASH_SOURCE[0]}")/10-fix-ksu-unused-label.sh"
+
+# The SUSFS support patch's copy of ksu_access_ok() in kernel_compat.c
+# collides with v1.1.1's own native (non-static) definition of the same
+# function, which is a build-breaking redefinition error. Fix it now,
+# right after integration, so a clean build never hits it.
+"$(dirname "${BASH_SOURCE[0]}")/11-fix-ksu-access-ok.sh"
+
+# On v1.1.1, the pinned SUSFS support patch fails to apply 3/3 hunks
+# against selinux/rules.c and 2/16 hunks against core_hook.c (upstream
+# context has drifted since the patch was written). The build compiles
+# but fails at final link with undefined symbols (is_manager,
+# ksu_handle_sepolicy, is_zygote, try_umount, ksu_apply_kernelsu_rules,
+# getenforce). Fix it now, right after integration, so a clean build
+# never hits it.
+"$(dirname "${BASH_SOURCE[0]}")/12-fix-ksu-rules-corehook.sh"
