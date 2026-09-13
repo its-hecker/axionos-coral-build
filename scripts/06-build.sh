@@ -18,7 +18,6 @@ log "Sourcing envsetup.sh"
 # next.
 set +u
 # shellcheck disable=SC1091
-set +u
 source build/envsetup.sh
 set -u
 
@@ -27,14 +26,35 @@ set -u
 # against the wrong target config.
 # GMS_VARIANT (set in config.env) picks Gapps level: gms/full, pico, core,
 # or va/vanilla for no Google apps at all.
+#
+# axion, like envsetup.sh itself, isn't `set -e` safe either -- when a
+# source-tree change (e.g. the KSU/SUSFS kernel edits) invalidates lunch's
+# cached BUILD_VAR_CACHE_READY config, axion has to re-derive it, and that
+# re-derivation path runs ordinary AOSP shell-function commands that return
+# non-zero as normal control flow (a `grep` matching nothing, a version
+# probe, etc.). Under `set -e` that silently kills this whole script the
+# instant it happens, with no error message -- it just dumps you back to
+# the prompt right after axion's usage banner. Relax `-e` for the call
+# itself and check its actual exit status by hand instead.
 log "axion $DEVICE_CODENAME userdebug $GMS_VARIANT"
+set +e
 axion "$DEVICE_CODENAME" userdebug "$GMS_VARIANT"
+AXION_EXIT=$?
+set -e
+
+if [[ "$AXION_EXIT" -ne 0 ]]; then
+  err "axion $DEVICE_CODENAME userdebug $GMS_VARIANT exited with status $AXION_EXIT."
+  err "This is the lunch/product-config step, before any compilation starts --"
+  err "it is NOT the KSU/kernel link failure from the v8 addendum. Re-run it by"
+  err "hand (source build/envsetup.sh; axion $DEVICE_CODENAME userdebug $GMS_VARIANT)"
+  err "and read whatever it prints right above its usage banner for the real cause."
+  exit 1
+fi
 
 log "Starting ax -br -j$(nproc --all) - logging to $LOGFILE"
 log "This can take 25 min to a few hours. Safe to detach (byobu) and check back."
 BUILD_OK=0
 ax -br -j"$(nproc --all)" 2>&1 | tee "$LOGFILE" && BUILD_OK=1
-set -u
 
 if [[ "$BUILD_OK" -eq 1 ]]; then
   ok "Build finished. Output should be under out/target/product/$DEVICE_CODENAME/"
