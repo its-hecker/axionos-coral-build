@@ -84,3 +84,8 @@ if grep -rL "CONFIG_MODULES=y" "$DEFCONFIG_DIR"/*coral* 2>/dev/null | grep -q .;
 fi
 
 ok "KernelSU-Next + SUSFS integration complete."
+
+# KernelSU-Next + susfs4ksu are nested git repos inside the kernel tree,
+# which pushes UTS_RELEASE past the kernel's 64-char limit. Fix it now,
+# right after integration, so a clean build never hits the overflow.
+"$(dirname "${BASH_SOURCE[0]}")/08-fix-kernelrelease.sh"
