@@ -39,17 +39,32 @@ if [[ -f .susfs-patch-applied ]]; then
 else
   log "Pulling SUSFS support patch for KernelSU-Next"
   curl -o 0001-Kernel-Implement-SUSFS-v1.5.3.patch "$SUSFS_PATCH_URL"
-  if patch -p1 --dry-run < 0001-Kernel-Implement-SUSFS-v1.5.3.patch >/dev/null 2>&1; then
-    patch -p1 < 0001-Kernel-Implement-SUSFS-v1.5.3.patch
-    touch .susfs-patch-applied
+
+  # NOTE: on some KernelSU-Next versions (e.g. v1.1.1) this patch is known
+  # to apply cleanly for most hunks but reject a handful whose surrounding
+  # context has drifted upstream (see scripts/12-fix-ksu-rules-corehook.sh
+  # for the full diagnosis). A `--dry-run` gate that demands 100% clean
+  # application would refuse to apply ANY of it in that case -- including
+  # the hunks that DO still apply cleanly -- and scripts 10/11/12 would
+  # never get a chance to patch up the rest. So: always attempt the real
+  # patch, let whatever hunks succeed land, and don't hard-fail here. If
+  # something is applied badly enough that the fix scripts can't reconcile
+  # it, script 12's own verification step will catch it and fail loudly.
+  set +e
+  patch -p1 < 0001-Kernel-Implement-SUSFS-v1.5.3.patch
+  PATCH_EXIT=$?
+  set -e
+
+  if [[ "$PATCH_EXIT" -eq 0 ]]; then
     ok "Patch applied cleanly."
   else
-    err "Patch does not apply cleanly against this KernelSU-Next checkout."
-    err "This usually means the KSU_VERSION in config.env has drifted from what"
-    err "the patch expects. Try 'patch -p1 < 0001-...patch' manually and resolve"
-    err "any .rej files by hand, or pin an older KSU_VERSION."
-    exit 1
+    warn "Patch did not apply 100% cleanly -- some hunks were rejected"
+    warn "(see kernel/*.rej and kernel/selinux/*.rej files under KernelSU-Next"
+    warn "for exactly which ones, if you want to inspect them)."
+    warn "Continuing: scripts 10, 11, and 12 (run right after this step)"
+    warn "patch up the known leftover call sites for KSU_VERSION=$KSU_VERSION."
   fi
+  touch .susfs-patch-applied
 fi
 
 cd "$KDIR"
