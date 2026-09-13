@@ -16,6 +16,10 @@ Steps (run in this order the first time):
   trees         clone device/kernel/vendor trees           (02-clone-device-trees.sh)
   keys          generate + backup signing keys             (03-keygen.sh)
   ksu           integrate KernelSU-Next + SUSFS             (04-ksu-susfs.sh)
+  kernelrelease-fix
+                shorten kernel version string (64-char fix) (08-fix-kernelrelease.sh)
+                runs automatically at the end of 'ksu' — only needed standalone
+                if you want to re-apply it without redoing KSU/SUSFS integration.
   sepolicy      add Axion's required SELinux rules          (05-sepolicy-patch.sh)
   device-props  set maintainer/camera/processor properties  (07-device-properties.sh)
   build         axion + ax                                  (06-build.sh)
@@ -42,6 +46,7 @@ case "$STEP" in
   trees)        run_step "device trees"      "02-clone-device-trees.sh" ;;
   keys)         run_step "signing keys"      "03-keygen.sh" ;;
   ksu)          run_step "KSU-Next+SUSFS"    "04-ksu-susfs.sh" ;;
+  kernelrelease-fix) run_step "kernel release length fix" "08-fix-kernelrelease.sh" ;;
   sepolicy)     run_step "sepolicy patch"    "05-sepolicy-patch.sh" ;;
   device-props) run_step "device properties" "07-device-properties.sh" ;;
   build)        run_step "build"             "06-build.sh" ;;
