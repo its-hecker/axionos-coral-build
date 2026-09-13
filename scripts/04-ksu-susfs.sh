@@ -6,13 +6,53 @@ source ../config.env
 source lib.sh
 require_source_root
 
+# --- Decide whether to integrate KernelSU-Next + SUSFS for this build ---
+# config.env's INTEGRATE_KSU_SUSFS is only the fallback default (currently
+# "false" -- stock/non-rooted). Root is opt-in per build:
+#   ./build.sh ksu --yes   -> force root on, no prompt
+#   ./build.sh ksu --no    -> force root off, no prompt
+#   ./build.sh ksu         -> prompt y/N if run interactively,
+#                              otherwise fall back to config.env's value
+ANSWER_FLAG="${1:-}"
+case "${ANSWER_FLAG,,}" in
+  --yes|-y) INTEGRATE_KSU_SUSFS="true" ;;
+  --no|-n)  INTEGRATE_KSU_SUSFS="false" ;;
+  "")
+    if [[ -t 0 ]]; then
+      read -rp "Add KernelSU-Next + SUSFS root to this build? [y/N]: " reply
+      case "${reply,,}" in
+        y|yes) INTEGRATE_KSU_SUSFS="true" ;;
+        *)     INTEGRATE_KSU_SUSFS="false" ;;
+      esac
+    fi
+    # else: no TTY and no flag -- keep config.env's value as-is.
+    ;;
+  *)
+    die "Unknown flag '$ANSWER_FLAG' for 04-ksu-susfs.sh -- use --yes or --no."
+    ;;
+esac
+
+KDIR="$SOURCE_ROOT/$KERNEL_TREE_PATH"
+
 if [[ "${INTEGRATE_KSU_SUSFS,,}" != "true" ]]; then
-  warn "INTEGRATE_KSU_SUSFS is set to \"$INTEGRATE_KSU_SUSFS\" in config.env — skipping"
-  warn "KernelSU-Next + SUSFS integration. This will be a stock, non-rooted kernel build."
+  warn "Building WITHOUT KernelSU-Next/SUSFS — stock, non-rooted kernel."
+  if [[ -d "$KDIR/KernelSU-Next" ]]; then
+    # Just skipping this script does NOT undo a prior integration -- the
+    # kernel tree already has drivers/kernelsu/, the copied susfs4ksu
+    # fs/ files, and patched core_hook.c/rules.c sitting in it, and
+    # 06-build.sh would happily compile all of that back in regardless
+    # of this flag. Re-clone the kernel tree fresh so "no" actually means
+    # stock. (This is what we had to do by hand once already.)
+    warn "Kernel tree still has a previous KernelSU-Next/SUSFS integration"
+    warn "in it. Re-cloning the kernel tree fresh so this build is"
+    warn "genuinely stock..."
+    rm -rf "$KDIR"
+    bash "$SCRIPT_DIR/02-clone-device-trees.sh"
+    ok "Kernel tree re-cloned clean -- no KernelSU-Next/SUSFS present."
+  fi
   exit 0
 fi
 
-KDIR="$SOURCE_ROOT/$KERNEL_TREE_PATH"
 [[ -d "$KDIR" ]] || die "Kernel tree not found at $KDIR — run 02-clone-device-trees.sh first."
 cd "$KDIR"
 
@@ -111,30 +151,39 @@ fi
 
 ok "KernelSU-Next + SUSFS integration complete."
 
+# NOTE: these are invoked as `bash "$SCRIPT_DIR/..."` rather than executed
+# directly. A direct exec ("$SCRIPT_DIR/foo.sh") depends on the file's own
+# execute bit, which was silently lost once when these files were copied
+# onto the server instead of git-cloned -- that produced a bare
+# "Permission denied" that, under this script's `set -e`, aborted the
+# whole integration right here and skipped every fix below it, silently
+# reproducing the exact errors these scripts exist to prevent. Invoking
+# via `bash` sidesteps the execute bit entirely.
+
 # KernelSU-Next + susfs4ksu are nested git repos inside the kernel tree,
 # which pushes UTS_RELEASE past the kernel's 64-char limit. Fix it now,
 # right after integration, so a clean build never hits the overflow.
-"$SCRIPT_DIR/08-fix-kernelrelease.sh"
+bash "$SCRIPT_DIR/08-fix-kernelrelease.sh"
 
 # msm-4.14 predates path_umount() (added upstream in Linux 5.9), which
 # KernelSU-Next's core_hook.c calls directly for its umount-hiding logic.
 # Without this backport the final kernel link fails with
 # "undefined symbol: path_umount". Fix it now, right after integration,
 # so a clean build never hits it.
-"$SCRIPT_DIR/09-fix-path-umount.sh"
+bash "$SCRIPT_DIR/09-fix-path-umount.sh"
 
 # The SUSFS patch's ksu_try_umount() defines a goto target that some
 # KernelSU-Next versions (e.g. v1.1.1, after its syscall-hook-version
 # revert) never actually jump to, which AOSP's -Werror turns into a
 # build-breaking "unused label" error. Fix it now, right after
 # integration, so a clean build never hits it.
-"$SCRIPT_DIR/10-fix-ksu-unused-label.sh"
+bash "$SCRIPT_DIR/10-fix-ksu-unused-label.sh"
 
 # The SUSFS support patch's copy of ksu_access_ok() in kernel_compat.c
 # collides with v1.1.1's own native (non-static) definition of the same
 # function, which is a build-breaking redefinition error. Fix it now,
 # right after integration, so a clean build never hits it.
-"$SCRIPT_DIR/11-fix-ksu-access-ok.sh"
+bash "$SCRIPT_DIR/11-fix-ksu-access-ok.sh"
 
 # On v1.1.1, the pinned SUSFS support patch fails to apply 3/3 hunks
 # against selinux/rules.c and 2/16 hunks against core_hook.c (upstream
@@ -143,4 +192,4 @@ ok "KernelSU-Next + SUSFS integration complete."
 # ksu_handle_sepolicy, is_zygote, try_umount, ksu_apply_kernelsu_rules,
 # getenforce). Fix it now, right after integration, so a clean build
 # never hits it.
-"$SCRIPT_DIR/12-fix-ksu-rules-corehook.sh"
+bash "$SCRIPT_DIR/12-fix-ksu-rules-corehook.sh"
