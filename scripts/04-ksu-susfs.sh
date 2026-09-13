@@ -15,9 +15,19 @@ KDIR="$SOURCE_ROOT/$KERNEL_TREE_PATH"
 [[ -d "$KDIR" ]] || die "Kernel tree not found at $KDIR — run 02-clone-device-trees.sh first."
 cd "$KDIR"
 
-if [[ -d KernelSU-Next ]]; then
-  ok "KernelSU-Next already present in kernel tree — skipping setup."
+INSTALLED_VERSION=""
+if [[ -d KernelSU-Next/.git ]]; then
+  INSTALLED_VERSION="$(git -C KernelSU-Next describe --tags 2>/dev/null || true)"
+fi
+
+if [[ -d KernelSU-Next && "$INSTALLED_VERSION" == "$KSU_VERSION" ]]; then
+  ok "KernelSU-Next $KSU_VERSION already present in kernel tree — skipping setup."
 else
+  if [[ -d KernelSU-Next ]]; then
+    warn "KernelSU-Next present but at ${INSTALLED_VERSION:-unknown}, config.env wants $KSU_VERSION."
+    warn "Removing old checkout so the version bump actually takes effect."
+    rm -rf KernelSU-Next
+  fi
   log "Installing KernelSU-Next $KSU_VERSION"
   curl -LSs "$KSU_SETUP_URL" | bash -s "$KSU_VERSION"
 fi
