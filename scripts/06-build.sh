@@ -7,42 +7,35 @@ require_source_root
 
 LOGFILE="$SOURCE_ROOT/build-$(date +%Y%m%d-%H%M%S).log"
 log "Sourcing envsetup.sh"
-# AOSP's envsetup.sh - and AxionOS's own axion/ax wrapper functions on top
-# of it - reference unset variables internally (envsetup.sh: TOP; axion/ax:
-# BUILD_VAR_CACHE_READY, seen when lunch's cached config is invalidated by
-# a source-tree change and it has to re-derive it) and none of it was
-# written to be `set -u` safe. Relax strict mode for the whole AOSP-tooling
-# section below rather than chasing each unbound variable individually -
-# re-enabling `-u` right after the source (as earlier versions of this
-# script did) just moves the crash into whichever wrapper function runs
-# next.
-set +u
-# shellcheck disable=SC1091
+
+# AOSP's envsetup.sh, and AxionOS's axion/ax wrapper functions built on top
+# of it, are not written to be `set -e` OR `set -u` safe: they reference
+# unset variables (envsetup.sh: TOP; axion/ax: BUILD_VAR_CACHE_READY) and
+# routinely have internal commands (grep checks, version probes, lunch's
+# cache re-derivation logic) return non-zero as completely normal control
+# flow, not as a real failure. Under strict mode, either flag silently
+# kills this whole script mid-function -- and *where* it dies varies from
+# run to run depending on whether lunch's product-config cache happens to
+# be valid or needs re-deriving (which any source-tree change, like the
+# KSU/SUSFS kernel edits, invalidates). Patching one call site at a time
+# just moves the crash to the next one. Relax -e and -u for this entire
+# AOSP-tooling block instead, and verify success explicitly via exit codes
+# the whole way through, same as this script already does for ax -br.
+set +eu
+
 source build/envsetup.sh
-set -u
 
 # AxionOS ships its own build wrapper (axion/ax) rather than stock
 # breakfast/brunch - using breakfast/brunch here would silently build
 # against the wrong target config.
 # GMS_VARIANT (set in config.env) picks Gapps level: gms/full, pico, core,
 # or va/vanilla for no Google apps at all.
-#
-# axion, like envsetup.sh itself, isn't `set -e` safe either -- when a
-# source-tree change (e.g. the KSU/SUSFS kernel edits) invalidates lunch's
-# cached BUILD_VAR_CACHE_READY config, axion has to re-derive it, and that
-# re-derivation path runs ordinary AOSP shell-function commands that return
-# non-zero as normal control flow (a `grep` matching nothing, a version
-# probe, etc.). Under `set -e` that silently kills this whole script the
-# instant it happens, with no error message -- it just dumps you back to
-# the prompt right after axion's usage banner. Relax `-e` for the call
-# itself and check its actual exit status by hand instead.
 log "axion $DEVICE_CODENAME userdebug $GMS_VARIANT"
-set +e
 axion "$DEVICE_CODENAME" userdebug "$GMS_VARIANT"
 AXION_EXIT=$?
-set -e
 
 if [[ "$AXION_EXIT" -ne 0 ]]; then
+  set -eu
   err "axion $DEVICE_CODENAME userdebug $GMS_VARIANT exited with status $AXION_EXIT."
   err "This is the lunch/product-config step, before any compilation starts --"
   err "it is NOT the KSU/kernel link failure from the v8 addendum. Re-run it by"
@@ -55,6 +48,7 @@ log "Starting ax -br -j$(nproc --all) - logging to $LOGFILE"
 log "This can take 25 min to a few hours. Safe to detach (byobu) and check back."
 BUILD_OK=0
 ax -br -j"$(nproc --all)" 2>&1 | tee "$LOGFILE" && BUILD_OK=1
+set -eu
 
 if [[ "$BUILD_OK" -eq 1 ]]; then
   ok "Build finished. Output should be under out/target/product/$DEVICE_CODENAME/"
