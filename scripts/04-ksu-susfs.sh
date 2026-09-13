@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 source ../config.env
 source lib.sh
 require_source_root
@@ -113,27 +114,27 @@ ok "KernelSU-Next + SUSFS integration complete."
 # KernelSU-Next + susfs4ksu are nested git repos inside the kernel tree,
 # which pushes UTS_RELEASE past the kernel's 64-char limit. Fix it now,
 # right after integration, so a clean build never hits the overflow.
-"$(dirname "${BASH_SOURCE[0]}")/08-fix-kernelrelease.sh"
+"$SCRIPT_DIR/08-fix-kernelrelease.sh"
 
 # msm-4.14 predates path_umount() (added upstream in Linux 5.9), which
 # KernelSU-Next's core_hook.c calls directly for its umount-hiding logic.
 # Without this backport the final kernel link fails with
 # "undefined symbol: path_umount". Fix it now, right after integration,
 # so a clean build never hits it.
-"$(dirname "${BASH_SOURCE[0]}")/09-fix-path-umount.sh"
+"$SCRIPT_DIR/09-fix-path-umount.sh"
 
 # The SUSFS patch's ksu_try_umount() defines a goto target that some
 # KernelSU-Next versions (e.g. v1.1.1, after its syscall-hook-version
 # revert) never actually jump to, which AOSP's -Werror turns into a
 # build-breaking "unused label" error. Fix it now, right after
 # integration, so a clean build never hits it.
-"$(dirname "${BASH_SOURCE[0]}")/10-fix-ksu-unused-label.sh"
+"$SCRIPT_DIR/10-fix-ksu-unused-label.sh"
 
 # The SUSFS support patch's copy of ksu_access_ok() in kernel_compat.c
 # collides with v1.1.1's own native (non-static) definition of the same
 # function, which is a build-breaking redefinition error. Fix it now,
 # right after integration, so a clean build never hits it.
-"$(dirname "${BASH_SOURCE[0]}")/11-fix-ksu-access-ok.sh"
+"$SCRIPT_DIR/11-fix-ksu-access-ok.sh"
 
 # On v1.1.1, the pinned SUSFS support patch fails to apply 3/3 hunks
 # against selinux/rules.c and 2/16 hunks against core_hook.c (upstream
@@ -142,4 +143,4 @@ ok "KernelSU-Next + SUSFS integration complete."
 # ksu_handle_sepolicy, is_zygote, try_umount, ksu_apply_kernelsu_rules,
 # getenforce). Fix it now, right after integration, so a clean build
 # never hits it.
-"$(dirname "${BASH_SOURCE[0]}")/12-fix-ksu-rules-corehook.sh"
+"$SCRIPT_DIR/12-fix-ksu-rules-corehook.sh"
