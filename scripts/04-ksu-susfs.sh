@@ -89,3 +89,10 @@ ok "KernelSU-Next + SUSFS integration complete."
 # which pushes UTS_RELEASE past the kernel's 64-char limit. Fix it now,
 # right after integration, so a clean build never hits the overflow.
 "$(dirname "${BASH_SOURCE[0]}")/08-fix-kernelrelease.sh"
+
+# msm-4.14 predates path_umount() (added upstream in Linux 5.9), which
+# KernelSU-Next's core_hook.c calls directly for its umount-hiding logic.
+# Without this backport the final kernel link fails with
+# "undefined symbol: path_umount". Fix it now, right after integration,
+# so a clean build never hits it.
+"$(dirname "${BASH_SOURCE[0]}")/09-fix-path-umount.sh"

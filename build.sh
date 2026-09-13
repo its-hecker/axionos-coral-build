@@ -18,7 +18,11 @@ Steps (run in this order the first time):
   ksu           integrate KernelSU-Next + SUSFS             (04-ksu-susfs.sh)
   kernelrelease-fix
                 shorten kernel version string (64-char fix) (08-fix-kernelrelease.sh)
-                runs automatically at the end of 'ksu' — only needed standalone
+                runs automatically at the end of 'ksu' -- only needed standalone
+                if you want to re-apply it without redoing KSU/SUSFS integration.
+  path-umount-fix
+                backport path_umount() for pre-5.9 kernels    (09-fix-path-umount.sh)
+                runs automatically at the end of 'ksu' -- only needed standalone
                 if you want to re-apply it without redoing KSU/SUSFS integration.
   sepolicy      add Axion's required SELinux rules          (05-sepolicy-patch.sh)
   device-props  set maintainer/camera/processor properties  (07-device-properties.sh)
@@ -47,6 +51,7 @@ case "$STEP" in
   keys)         run_step "signing keys"      "03-keygen.sh" ;;
   ksu)          run_step "KSU-Next+SUSFS"    "04-ksu-susfs.sh" ;;
   kernelrelease-fix) run_step "kernel release length fix" "08-fix-kernelrelease.sh" ;;
+  path-umount-fix)   run_step "path_umount backport"      "09-fix-path-umount.sh" ;;
   sepolicy)     run_step "sepolicy patch"    "05-sepolicy-patch.sh" ;;
   device-props) run_step "device properties" "07-device-properties.sh" ;;
   build)        run_step "build"             "06-build.sh" ;;
