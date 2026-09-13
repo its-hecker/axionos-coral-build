@@ -16,6 +16,14 @@
 # exactly this situation. This script applies that backport to
 # fs/namespace.c.
 #
+# Hardened after a live run produced a duplicate-definition build error
+# (redefinition of 'can_umount' / 'path_umount') when this script ended
+# up applying its patch on top of an existing definition. A flag file
+# is now the primary guard -- it makes re-application physically
+# impossible regardless of whether a text-based grep check would have
+# caught it -- with the grep check kept as a secondary safety net for a
+# fresh kernel tree that already carries a backport from elsewhere.
+#
 # Safe to re-run -- checks before patching so it's idempotent.
 
 set -euo pipefail
@@ -30,8 +38,19 @@ KDIR="$SOURCE_ROOT/$KERNEL_TREE_PATH"
 NAMESPACE_C="$KDIR/fs/namespace.c"
 [[ -f "$NAMESPACE_C" ]] || die "fs/namespace.c not found at $NAMESPACE_C"
 
-if grep -q '^int path_umount' "$NAMESPACE_C"; then
-  ok "path_umount already backported in fs/namespace.c -- skipping."
+FLAG_FILE="$KDIR/.path-umount-patch-applied"
+
+if [[ -f "$FLAG_FILE" ]]; then
+  ok "path_umount fix already applied by this script (flag file present) -- skipping."
+  exit 0
+fi
+
+EXISTING_COUNT="$(grep -c '^int path_umount' "$NAMESPACE_C" || true)"
+if [[ "$EXISTING_COUNT" -ge 1 ]]; then
+  ok "path_umount already defined in fs/namespace.c ($EXISTING_COUNT copy/copies found)."
+  ok "Not our doing (no flag file) -- likely already provided by the SUSFS kernel"
+  ok "patch itself. Recording that here so we never touch this file for it."
+  touch "$FLAG_FILE"
   exit 0
 fi
 
@@ -171,8 +190,10 @@ fi
 
 rm -f "$PATCH_FILE"
 
-# The KernelSU build sometimes gates on finding path_umount textually in
-# fs/namespace.c (some forks check via grep and set -DKSU_HAS_PATH_UMOUNT).
-# Nothing else to do here -- the symbol now exists and the linker will find it.
+# Record that we've handled this, so a future re-run of this script (or of
+# 04-ksu-susfs.sh, which calls it unconditionally every time) never
+# re-patches an already-patched tree -- this is what caused the duplicate
+# definition build error this fix addresses.
+touch "$FLAG_FILE"
 
 ok "path_umount fix complete."
