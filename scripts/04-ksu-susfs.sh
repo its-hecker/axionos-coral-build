@@ -106,3 +106,10 @@ ok "KernelSU-Next + SUSFS integration complete."
 # "undefined symbol: path_umount". Fix it now, right after integration,
 # so a clean build never hits it.
 "$(dirname "${BASH_SOURCE[0]}")/09-fix-path-umount.sh"
+
+# The SUSFS patch's ksu_try_umount() defines a goto target that some
+# KernelSU-Next versions (e.g. v1.1.1, after its syscall-hook-version
+# revert) never actually jump to, which AOSP's -Werror turns into a
+# build-breaking "unused label" error. Fix it now, right after
+# integration, so a clean build never hits it.
+"$(dirname "${BASH_SOURCE[0]}")/10-fix-ksu-unused-label.sh"
